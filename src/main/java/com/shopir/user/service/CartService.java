@@ -7,7 +7,6 @@ import com.shopir.user.entity.Cart;
 import com.shopir.user.exceptions.BadRequestException;
 import com.shopir.user.exceptions.NotFoundException;
 import com.shopir.user.repository.CartRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,17 +47,17 @@ public class CartService {
         return cartResponses;
     }
 
-    public CartResponse findCart(Long idWebUser, Long idProduct) throws Exception {
-        Optional<Cart> optionalCart  = cartRepository.findByIdWebUserAndIdProduct(idWebUser, idProduct);
+    public CartResponse findCart(Long idWebUser, Long idCart) throws Exception {
+        Optional<Cart> optionalCart  = cartRepository.findByIdCartAndWebUser_IdWebUser(idCart, idWebUser);
         if(optionalCart.isEmpty()) {
             throw new BadRequestException("Not found cart by idUser  and idProduct");
         }
-        ProductKafkaDto productKafkaDto = kafkaConsumerService.getNameProductById(idProduct);
+        ProductKafkaDto productKafkaDto = kafkaConsumerService.getNameProductByIdCart(idCart);
         Cart cart = optionalCart.get();
         return CartResponse.builder()
                 .idCart(cart.getIdCart())
                 .idWebUser(idWebUser)
-                .idProduct(idProduct)
+                .idProduct(productKafkaDto.getIdProduct())
                 .nameProduct(productKafkaDto.getNameProduct())
                 .price(productKafkaDto.getPrice())
                 .quantity(cart.getQuantity())
@@ -66,7 +65,7 @@ public class CartService {
     }
 
     @Transactional
-    public void createNewBasket(Long idUser, CreateCartRequestDto requestDto) {
+    public Long createNewCart(Long idUser, CreateCartRequestDto requestDto) {
         if (idUser == null || requestDto.getIdProduct() == null) {
             throw new BadRequestException("User ID and Product ID must not be null");
         }
@@ -78,7 +77,9 @@ public class CartService {
         if (existingCart.isPresent()) {
             throw new BadRequestException("Cart already exists for this user and product");
         }
-        cartRepository.saveCart(idUser, requestDto.getIdProduct());
+      cartRepository.saveCart(idUser, requestDto.getIdProduct());
+        Cart cart = cartRepository.findByIdWebUserAndIdProduct(idUser, requestDto.getIdProduct()).orElseThrow();
+        return cart.getIdCart();
     }
 
     public void plusQuantityCart(Long idCart, Long idWebUser) {

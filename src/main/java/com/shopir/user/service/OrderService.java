@@ -45,8 +45,8 @@ public class OrderService {
         this.kafkaConsumerService = kafkaConsumerService;
     }
 
-    public OrderUserResponseDto findOrder(Long idOrder) throws Exception {
-        OrderUser orderUser = orderUserRepository.findById(idOrder).orElseThrow(() -> new NotFoundException("Order with id " + idOrder + " not found"));
+    public OrderUserResponseDto findOrder(Long idOrder, Long idWebUser) throws Exception {
+        OrderUser orderUser = orderUserRepository.findByIdOrderAndWebUser_IdWebUser(idOrder, idWebUser).orElseThrow(() -> new NotFoundException("Order with id " + idOrder + " not found"));
         List<ProductKafkaDto> dtos = kafkaConsumerService.getProductByIdOrder(idOrder);
         List<String> nameProducts = new ArrayList<>();
         for (ProductKafkaDto productKafkaDto: dtos) {

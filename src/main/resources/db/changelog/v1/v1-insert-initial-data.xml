@@ -1,0 +1,135 @@
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+    <changeSet id="1-21" author="Oleg">
+        <!-- Вставка product_category -->
+        <insert tableName="product_category">
+            <column name="name" value="Электроника"/>
+        </insert>
+
+        <!-- Вставка characteristic -->
+        <loadData tableName="characteristic" file="db/changelog/data/character-data.csv"/>
+
+        <!-- Вставка warehouse -->
+        <insert tableName="warehouse">
+            <column name="warehouse_number" valueNumeric="323"/>
+        </insert>
+    </changeSet>
+    <changeSet id="v1-22" author="Oleg">
+        <!-- Данные для product_category -->
+        <insert tableName="product_category">
+            <column name="name" value="Электроника"/>
+        </insert>
+        <insert tableName="product_category">
+            <column name="name" value="Одежда"/>
+        </insert>
+        <insert tableName="product_category">
+            <column name="name" value="Бытовая техника"/>
+        </insert>
+
+        <!-- Данные для role_user -->
+        <insert tableName="role_user">
+            <column name="name_role" value="ROLE_CLIENT"/>
+        </insert>
+        <insert tableName="role_user">
+            <column name="name_role" value="ROLE_ADMIN"/>
+        </insert>
+
+        <!-- Данные для city -->
+        <insert tableName="city">
+            <column name="name_city" value="Москва"/>
+        </insert>
+        <insert tableName="city">
+            <column name="name_city" value="Санкт-Петербург"/>
+        </insert>
+
+        <!-- Данные для payment_status -->
+        <insert tableName="payment_status">
+            <column name="name" value="Оплачено"/>
+        </insert>
+        <insert tableName="payment_status">
+            <column name="name" value="Не оплачено"/>
+        </insert>
+
+        <!-- Данные для payment_type -->
+        <insert tableName="payment_type">
+            <column name="name" value="Карта"/>
+        </insert>
+        <insert tableName="payment_type">
+            <column name="name" value="Наличные"/>
+        </insert>
+
+        <!-- Данные для order_status -->
+        <insert tableName="order_status">
+            <column name="name_order_status" value="В обработке"/>
+        </insert>
+        <insert tableName="order_status">
+            <column name="name_order_status" value="Доставляется"/>
+        </insert>
+        <insert tableName="order_status">
+            <column name="name_order_status" value="Завершен"/>
+        </insert>
+    </changeSet>
+    <changeSet id="v1-23" author="Oleg">
+    <!-- Добавление пользователей -->
+    <insert tableName="web_user">
+        <column name="id_role_user" valueNumeric="1"/>
+        <column name="name" value="Иван"/>
+        <column name="surname" value="Иванов"/>
+        <column name="email" value="ivan@example.com"/>
+        <column name="phone" value="+79991112233"/>
+        <column name="password" value="$2a$12$Q2htJki53hWX9.VAxAdHluZJP8wGVjnA4g3/ZazAwKzNiSJlzFMdW"/>
+    </insert>
+    <insert tableName="web_user">
+        <column name="id_role_user" valueNumeric="2"/>
+        <column name="name" value="Анна"/>
+        <column name="surname" value="Петрова"/>
+        <column name="email" value="anna@example.com"/>
+        <column name="phone" value="+79994445566"/>
+        <column name="password" value="hashed_password_anna"/>
+    </insert>
+
+    <!-- Добавление продуктов -->
+    <insert tableName="product">
+        <column name="is_deleted" valueNumeric="0"/>
+        <column name="price" valueNumeric="499.99"/>
+        <column name="id_product_category" valueNumeric="1"/>
+        <column name="description" value="Беспроводные наушники"/>
+        <column name="name_product" value="Наушники JBL"/>
+    </insert>
+    <insert tableName="product">
+        <column name="is_deleted" valueNumeric="0"/>
+        <column name="price" valueNumeric="1999.99"/>
+        <column name="id_product_category" valueNumeric="2"/>
+        <column name="description" value="Кожаная куртка мужская"/>
+        <column name="name_product" value="Куртка кожаная"/>
+    </insert>
+
+    <!-- Добавление товаров в корзину -->
+
+    <insert tableName="cart">
+        <column name="id_product" valueNumeric="2"/>
+        <column name="quantity" valueNumeric="2"/>
+        <column name="id_web_user" valueNumeric="1"/>
+    </insert>
+        <!-- Добавление заказа -->
+        <insert tableName="order_user">
+            <column name="id_web_user" valueNumeric="1"/>
+            <column name="id_payment_status" valueNumeric="1"/>
+            <column name="id_payment_type" valueNumeric="1"/>
+            <column name="transaction_number" value="TXN123456789"/>
+            <column name="date_supply" valueDate="2025-08-02"/>
+            <column name="order_number" valueNumeric="1001"/>
+            <column name="id_order_status" valueNumeric="3"/>
+        </insert>
+
+        <!-- Добавление связи заказ-продукты -->
+        <insert tableName="order_product">
+            <column name="id_product" valueNumeric="1"/>
+            <column name="quantity" valueNumeric="2"/>
+            <column name="product_price" valueNumeric="499.99"/>
+            <column name="id_order" valueNumeric="1"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

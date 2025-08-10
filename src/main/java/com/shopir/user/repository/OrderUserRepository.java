@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderUserRepository extends JpaRepository<OrderUser, Long> {
@@ -39,4 +40,6 @@ public interface OrderUserRepository extends JpaRepository<OrderUser, Long> {
                     "JOIN order_product op ON op.id_order = ou.id_order\n" +
                     "JOIN product p ON p.id_product = op.id_product WHERE ou.id_order_status IN (:statusList) AND ou.id_web_user = :idUser")
     List<Object[]> fetchOrderProductInfo(Long idUser, List<Long> statusList);
+
+    Optional<OrderUser> findByIdOrderAndWebUser_IdWebUser(Long idOrderUser, Long idWebUser);
 }

@@ -39,7 +39,6 @@ public class KafkaProducerService {
                 .role(webUser.getRoleUser().getNameRole())
                 .build();
 
-        // Сериализуем в JSON
         String json = objectMapper.writeValueAsString(dto);
 
         kafkaTemplate.send("user-response", json);

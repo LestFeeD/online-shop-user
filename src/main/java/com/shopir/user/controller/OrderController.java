@@ -5,6 +5,8 @@ import com.shopir.user.dto.response.OrderUserResponseDto;
 import com.shopir.user.dto.response.TotalOrderResponseDto;
 import com.shopir.user.service.AuthenticationService;
 import com.shopir.user.service.OrderService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,7 @@ import java.net.URI;
 import java.sql.Date;
 import java.util.List;
 
+@Tag(name = "Order")
 @RestController
 public class OrderController {
 
@@ -31,6 +34,8 @@ public class OrderController {
         this.orderService = orderService;
     }
 
+    @Operation(
+            summary = "The location and shows the order by its ID and the user.")
     @PreAuthorize("hasRole('CLIENT') or hasRole('ADMIN')")
     @GetMapping("/order/{idOrder}")
     public ResponseEntity<OrderUserResponseDto> findOrder(@PathVariable Long idOrder) throws Exception {
@@ -38,10 +43,12 @@ public class OrderController {
         if (idUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        orderService.findOrder( idOrder);
-        return ResponseEntity.ok().build();
+        OrderUserResponseDto orderUserResponseDto =  orderService.findOrder( idOrder, idUser);
+        return ResponseEntity.ok(orderUserResponseDto);
     }
 
+    @Operation(
+            summary = "Creating an order from a shopping cart.")
     @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
     @PostMapping("/order")
     public ResponseEntity<Long> createOrder(@RequestBody CreateOrderRequestDto requestDto) throws Exception {
@@ -57,6 +64,8 @@ public class OrderController {
                 .body(id);
     }
 
+    @Operation(
+            summary = "Finding sales over a certain period of time.")
     @PreAuthorize("hasRole('ADMIN', 'MANAGER' )")
     @GetMapping("/order")
     public ResponseEntity<TotalOrderResponseDto> getSaleWithinCertainTime(@RequestParam("startDate") Date startDate, @RequestParam("endDate") Date endDate) throws Exception {
@@ -68,6 +77,8 @@ public class OrderController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(
+            summary = "Getting the order history.")
     @PreAuthorize("hasRole('CLIENT')")
     @GetMapping("/history-order")
     public ResponseEntity<List<OrderUserResponseDto>> getOrders(@RequestParam("status") String status) throws Exception {

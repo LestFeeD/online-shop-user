@@ -10,7 +10,7 @@ __consumer_offsets 13 0
 __consumer_offsets 26 0
 __consumer_offsets 21 0
 __consumer_offsets 19 0
-__consumer_offsets 25 474
+__consumer_offsets 25 520
 __consumer_offsets 33 0
 __consumer_offsets 41 0
 user-response 0 93
@@ -30,14 +30,14 @@ __consumer_offsets 2 0
 __consumer_offsets 12 0
 __consumer_offsets 44 0
 __consumer_offsets 36 0
-__consumer_offsets 45 459
+__consumer_offsets 45 515
 __consumer_offsets 16 0
 __consumer_offsets 10 0
 __consumer_offsets 11 0
 order-product-request 0 0
 __consumer_offsets 20 0
 __consumer_offsets 47 0
-product-request 0 5
+product-request 0 8
 __consumer_offsets 18 0
 __consumer_offsets 32 0
 __consumer_offsets 7 0

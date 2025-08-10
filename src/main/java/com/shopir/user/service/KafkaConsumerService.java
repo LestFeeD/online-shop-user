@@ -5,9 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shopir.user.dto.ProductKafkaDto;
 import com.shopir.user.dto.request.GetIdProductRequestDto;
-import com.shopir.user.entity.CartProduct;
-import lombok.RequiredArgsConstructor;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,8 +12,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -41,11 +36,11 @@ public class KafkaConsumerService {
         this.objectMapper = objectMapper;
     }
 
-    public ProductKafkaDto getNameProductById(Long idProduct) throws Exception {
+    public ProductKafkaDto getNameProductByIdCart(Long idCart) throws Exception {
         CompletableFuture<ProductKafkaDto> future = new CompletableFuture<>();
-        pendingRequests.put(idProduct, future);
+        pendingRequests.put(idCart, future);
 
-        kafkaTemplate.send("product-request", String.valueOf(idProduct));
+        kafkaTemplate.send("product-request", String.valueOf(idCart));
 
         return future.get(20, TimeUnit.SECONDS);
     }
@@ -53,9 +48,9 @@ public class KafkaConsumerService {
     @KafkaListener(topics = "product-response", groupId = "user-group")
     public void handleProductByIdResponse(String json) throws JsonProcessingException {
         ProductKafkaDto dto = objectMapper.readValue(json, ProductKafkaDto.class);
-        Long idProduct = dto.getIdProduct();
+        Long idCart = dto.getIdCart();
 
-        CompletableFuture<ProductKafkaDto> future = pendingRequests.remove(idProduct);
+        CompletableFuture<ProductKafkaDto> future = pendingRequests.remove(idCart);
         if (future != null) {
             future.complete(dto);
         }

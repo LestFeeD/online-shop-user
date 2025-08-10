@@ -10,7 +10,6 @@ import lombok.Setter;
 @Setter
 @Builder
 public class CreateOrEditUserRequestDto {
-    private Long idUser;
     private String name;
     private String surname;
     @PhoneNumber

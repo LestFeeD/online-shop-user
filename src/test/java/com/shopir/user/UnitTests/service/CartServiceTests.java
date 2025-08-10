@@ -55,21 +55,19 @@ public class CartServiceTests {
 
     @Test
     void findCart_findCartUserByIdProductAndIdUser_returnCartResponse() throws Exception {
-        Cart cart = Mockito.mock(Cart.class);
-        when(cart.getIdCart()).thenReturn(1L);
-        when(cart.getQuantity()).thenReturn(2);
-        Optional<Cart> optionalCart  = Mockito.mock();
-        when(optionalCart.get()).thenReturn(cart);
+        Cart cart = new Cart();
+        cart.setIdCart(1L);
+        cart.setQuantity(2);
 
         ProductKafkaDto productKafkaDto = Mockito.mock();
 
 
-        when(cartRepository.findByIdWebUserAndIdProduct(1L, 1L)).thenReturn(optionalCart);
-        when(kafkaConsumerService.getNameProductById(1L)).thenReturn(productKafkaDto);
+        when(cartRepository.findByIdCartAndWebUser_IdWebUser(1L, 1L)).thenReturn(Optional.of(cart));
+        when(kafkaConsumerService.getNameProductByIdCart(1L)).thenReturn(productKafkaDto);
 
         cartService.findCart(1L, 1L);
 
-        verify(cartRepository).findByIdWebUserAndIdProduct(1L, 1L);
+        verify(cartRepository).findByIdCartAndWebUser_IdWebUser(1L, 1L);
     }
 
     @Test
@@ -77,14 +75,19 @@ public class CartServiceTests {
         CreateCartRequestDto requestDto = CreateCartRequestDto.builder()
                 .idProduct(1L)
                 .build();
-        Optional<Cart> optionalCart  = Mockito.mock();
+        Cart cart = new Cart();
+        cart.setIdCart(1L);
 
-        when(cartRepository.findByIdWebUserAndIdProduct(1L, 1L)).thenReturn(optionalCart);
+
+        when(cartRepository.findByIdWebUserAndIdProduct(1L, 1L))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(cart));
+
         doNothing().when(cartRepository).saveCart(1L, requestDto.getIdProduct());
 
-        cartService.createNewBasket(1L, requestDto);
+        cartService.createNewCart(1L, requestDto);
 
-        verify(cartRepository).findByIdWebUserAndIdProduct(1L, 1L);
+        verify(cartRepository, times(2)).findByIdWebUserAndIdProduct(1L, 1L);
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.shopir.user.service;
 
 import com.shopir.user.dto.request.CreateOrEditUserRequestDto;
 import com.shopir.user.dto.request.LoginRequestDto;
+import com.shopir.user.dto.response.EditUserResponseDto;
 import com.shopir.user.dto.response.UserInformationResponseDto;
 import com.shopir.user.entity.Address;
 import com.shopir.user.entity.City;
@@ -19,6 +20,7 @@ import com.shopir.user.security.MyUserDetails;
 import com.shopir.user.utils.JwtUtils;
 import com.shopir.user.utils.PasswordChecker;
 import com.shopir.user.validation.ValidationErrors;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Tag(name = "User")
 @Service
 public class UserService implements UserDetailsService  {
     private final WebUserRepository webUserRepository;
@@ -78,7 +81,7 @@ public class UserService implements UserDetailsService  {
 
     @Cacheable(value = "user", key = "#idWebUser")
     public UserInformationResponseDto findUser(Long idWebUser) {
-        WebUser webUser = webUserRepository.findById(idWebUser).orElseThrow();
+        WebUser webUser = webUserRepository.findById(idWebUser).orElseThrow(() -> new NotFoundException("Not found user by id = " + idWebUser));
         return userFactory.makeUserDto(webUser);
     }
 
@@ -96,7 +99,7 @@ public class UserService implements UserDetailsService  {
         if(requestDto.getPassword().length() < 6) {
             throw new BadRequestException("password must be more than 6 characters.");
         }
-        RoleUser role = roleUserRepository.findByNameRole("CLIENT").orElseThrow(() -> new NotFoundException("Role not found"));
+        RoleUser role = roleUserRepository.findByNameRole("ROLE_CLIENT").orElseThrow(() -> new NotFoundException("Role not found"));
         String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
 
         WebUser webUser = WebUser.builder()
@@ -159,9 +162,11 @@ public class UserService implements UserDetailsService  {
 
     }
 
+
     @Transactional
     @CachePut(value = "user", key = "#idWebUser")
     public UserInformationResponseDto  editUser(CreateOrEditUserRequestDto requestDto, Long idWebUser, BindingResult bindingResult) {
+        logger.info("Data for edit user, name = {}, surname = {}, phone = {}", requestDto.getName(), requestDto.getSurname(), requestDto.getPhone());
         if(bindingResult.hasErrors() ) {
             String result = validationErrors.getValidationErrors(bindingResult);
             logger.error("Validation errors occurred while edit user: {}", result);
@@ -181,20 +186,37 @@ public class UserService implements UserDetailsService  {
             webUser.setPhone(requestDto.getPhone());
         }
 
+        WebUser updatedUser = webUserRepository.save(webUser);
+        logger.info("Data after edit user, name = {}, surname = {}, phone = {}", updatedUser.getName(), updatedUser.getSurname(), updatedUser.getPhone());
+
+        return  userFactory.makeUserDto(updatedUser);
+    }
+
+    @Transactional
+    public void editPasswordOrEmail(Long idWebUser, CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) {
+        logger.info("Data for edit user, email = {}, password = {}", requestDto.getEmail(), requestDto.getPassword());
+
+        if(bindingResult.hasErrors() ) {
+            String result = validationErrors.getValidationErrors(bindingResult);
+            logger.error("Validation errors occurred while edit password or email: {}", result);
+            throw new BadRequestException(result);
+        }
+
+        WebUser webUser = webUserRepository.findById(idWebUser).orElseThrow();
+
         if(requestDto.getEmail() != null) {
             if(webUserRepository.findByEmail(requestDto.getEmail()).isPresent()) {
                 throw new BadRequestException("The user with this email already exists.");
             }
-            requestDto.setEmail(requestDto.getEmail());
+            webUser.setEmail(requestDto.getEmail());
         }
 
         if(requestDto.getPassword() != null) {
             String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
-            requestDto.setPassword(encodedPassword);
+            webUser.setPassword(encodedPassword);
         }
+        webUserRepository.save(webUser);
 
-        WebUser updatedUser = webUserRepository.save(webUser);
-        return userFactory.makeUserDto(updatedUser);
     }
 
     @Transactional
@@ -208,16 +230,16 @@ public class UserService implements UserDetailsService  {
         }
 
         if(requestDto.getStreet() != null) {
-            requestDto.setStreet(requestDto.getStreet());
+            address.setStreet(requestDto.getStreet());
         }
         if(requestDto.getHome() != null) {
-            requestDto.setHome(requestDto.getHome());
+            address.setHome(requestDto.getHome());
         }
         if(requestDto.getFloor() != null) {
-            requestDto.setFloor(requestDto.getFloor());
+            address.setFloor(requestDto.getFloor());
         }
         if(requestDto.getAdditionalInformation() != null) {
-            requestDto.setAdditionalInformation(requestDto.getAdditionalInformation());
+            address.setAdditionalInformation(requestDto.getAdditionalInformation());
         }
         addressRepository.save(address);
     }

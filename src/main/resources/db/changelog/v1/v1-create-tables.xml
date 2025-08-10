@@ -1,0 +1,342 @@
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+    <!-- Table: characteristic -->
+    <changeSet id="v1-1" author="Oleg">
+        <createTable tableName="characteristic">
+            <column name="id_characteristic" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"></constraints>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: product_category -->
+    <changeSet id="v1-2" author="Oleg">
+        <createTable tableName="product_category">
+            <column name="id_product_category" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: product -->
+    <changeSet id="v1-3" author="Oleg">
+        <createTable tableName="product">
+            <column name="id_product" type="BIGINT" autoIncrement="true">
+            <constraints primaryKey="true"></constraints>
+            </column>
+            <column name="is_deleted" type="SMALLINT">
+                <constraints nullable="true" />
+            </column>
+            <column name="price" type="NUMERIC(10,2)"/>
+            <column name="id_product_category" type="BIGINT"/>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="name_product" type="VARCHAR(120)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="product" baseColumnNames="id_product_category"
+                                 constraintName="FK_product_category" referencedTableName="product_category"
+                                 referencedColumnNames="id_product_category"/>
+    </changeSet>
+
+    <!-- Table: product_characteristics -->
+    <changeSet id="v1-4" author="Oleg">
+        <createTable tableName="product_characteristics">
+            <column name="id_characteristic" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="id_product" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value_product" type="INTEGER"/>
+        </createTable>
+        <addPrimaryKey
+                tableName="product_characteristics"
+                columnNames="id_characteristic, id_product"
+                constraintName="pk_product_characteristics"/>
+        <addForeignKeyConstraint
+                baseTableName="product_characteristics"
+                baseColumnNames="id_characteristic"
+                constraintName="FK_characteristic"
+                referencedTableName="characteristic"
+                referencedColumnNames="id_characteristic"/>
+        <addForeignKeyConstraint
+                baseTableName="product_characteristics"
+                baseColumnNames="id_product"
+                constraintName="FK_product"
+                referencedTableName="product"
+                referencedColumnNames="id_product"/>
+    </changeSet>
+
+    <!-- Table: supplier -->
+    <changeSet id="v1-5" author="Oleg">
+        <createTable tableName="supplier">
+            <column name="id_supplier" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name_supplier" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: mail_supplier -->
+    <changeSet id="v1-6" author="Oleg">
+        <createTable tableName="mail_supplier">
+            <column name="id_mail_supplier" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="id_supplier" type="BIGINT"/>
+            <column name="name_mail_supplier" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="mail_supplier"
+                baseColumnNames="id_supplier"
+                constraintName="FK_mail_supplier_supplier"
+                referencedTableName="supplier"
+                referencedColumnNames="id_supplier"/>
+    </changeSet>
+
+    <!-- Table: warehouse -->
+    <changeSet id="v1-7" author="Oleg">
+        <createTable tableName="warehouse">
+            <column name="id_warehouse" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="warehouse_number" type="INTEGER"/>
+            <column name="home" type="VARCHAR(255)"/>
+            <column name="street" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: inventory -->
+    <changeSet id="v1-8" author="Oleg">
+        <createTable tableName="inventory">
+            <column name="id_inventory" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="id_product" type="BIGINT"/>
+            <column name="id_warehouse" type="BIGINT"/>
+            <column name="quantity" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="inventory"
+                baseColumnNames="id_product"
+                constraintName="FK_inventory_product"
+                referencedTableName="product"
+                referencedColumnNames="id_product"/>
+        <addForeignKeyConstraint
+                baseTableName="inventory"
+                baseColumnNames="id_warehouse"
+                constraintName="FK_inventory_warehouse"
+                referencedTableName="warehouse"
+                referencedColumnNames="id_warehouse"/>
+    </changeSet>
+
+    <!-- Table: supply_goods -->
+    <changeSet id="v1-9" author="Oleg">
+        <createTable tableName="supply_goods">
+            <column name="id_product" type="BIGINT"/>
+            <column name="id_supplier" type="BIGINT"/>
+            <column name="date_supply" type="DATE"/>
+            <column name="total_cost" type="NUMERIC(10,2)"/>
+        </createTable>
+        <addPrimaryKey tableName="supply_goods" columnNames="id_product, id_supplier" constraintName="pk_supply_goods"/>
+        <addForeignKeyConstraint
+                baseTableName="supply_goods"
+                baseColumnNames="id_product"
+                constraintName="FK_supply_goods_product"
+                referencedTableName="product"
+                referencedColumnNames="id_product"/>
+        <addForeignKeyConstraint
+                baseTableName="supply_goods"
+                baseColumnNames="id_supplier"
+                constraintName="FK_supply_goods_supplier"
+                referencedTableName="supplier"
+                referencedColumnNames="id_supplier"/>
+    </changeSet>
+
+    <!-- Table: address_warehouse -->
+    <changeSet id="v1-10" author="Oleg">
+        <createTable tableName="address_warehouse">
+            <column name="id_address_warehouse" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="street" type="VARCHAR(255)"/>
+            <column name="home" type="VARCHAR(255)"/>
+            <column name="id_warehouse" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="warehouse"
+                baseColumnNames="id_warehouse"
+                constraintName="FK_address_warehouse_warehouse"
+                referencedTableName="warehouse"
+                referencedColumnNames="id_warehouse"/>
+    </changeSet>
+    <changeSet id="v1-11" author="Oleg">
+        <createTable tableName="role_user">
+            <column name="id_role_user" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name_role" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v1-12" author="Oleg">
+        <createTable tableName="city">
+            <column name="id_city" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name_city" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: web_user -->
+    <changeSet id="v1-13" author="Oleg">
+        <createTable tableName="web_user">
+            <column name="id_web_user" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="id_role_user" type="BIGINT"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="password" type="VARCHAR(255)"/>
+            <column name="surname" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="web_user"
+                baseColumnNames="id_role_user"
+                constraintName="FK_web_user_role"
+                referencedTableName="role_user"
+                referencedColumnNames="id_role_user"/>
+    </changeSet>
+
+    <!-- Table: address -->
+    <changeSet id="v1-14" author="Oleg">
+        <createTable tableName="address">
+            <column name="id_address" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="id_city" type="BIGINT"/>
+            <column name="id_web_user" type="BIGINT"/>
+            <column name="street" type="VARCHAR(255)"/>
+            <column name="home" type="VARCHAR(255)"/>
+            <column name="floor" type="INTEGER"/>
+            <column name="additional_information" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="address"
+                baseColumnNames="id_city"
+                constraintName="FK_address_city"
+                referencedTableName="city"
+                referencedColumnNames="id_city"/>
+        <addForeignKeyConstraint
+                baseTableName="web_user"
+                baseColumnNames="id_web_user"
+                constraintName="FK_address_web_user"
+                referencedTableName="web_user"
+                referencedColumnNames="id_web_user"/>
+    </changeSet>
+
+    <!-- Table: cart -->
+    <changeSet id="v1-15" author="Oleg">
+        <createTable tableName="cart">
+            <column name="id_cart" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"></constraints>
+            </column>
+            <column name="id_product" type="BIGINT"/>
+            <column name="quantity" type="INTEGER"/>
+            <column name="id_web_user" type="BIGINT"/>
+
+        </createTable>
+        <addForeignKeyConstraint baseTableName="cart" baseColumnNames="id_product"
+                                 constraintName="FK_cart_product" referencedTableName="product"
+                                 referencedColumnNames="id_product"/>
+        <addForeignKeyConstraint baseTableName="cart" baseColumnNames="id_web_user"
+                                 constraintName="FK_cart_web_user" referencedTableName="web_user"
+                                 referencedColumnNames="id_web_user"/>
+    </changeSet>
+    <!-- Table: order_status -->
+    <changeSet id="v1-16" author="Oleg">
+        <createTable tableName="order_status">
+            <column name="id_order_status" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name_order_status" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: payment_status -->
+    <changeSet id="v1-17" author="Oleg">
+        <createTable tableName="payment_status">
+            <column name="id_payment_status" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: payment_type -->
+    <changeSet id="v1-18" author="Oleg">
+        <createTable tableName="payment_type">
+            <column name="id_payment_type" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table: order_user -->
+    <changeSet id="v1-19" author="Oleg">
+        <createTable tableName="order_user">
+            <column name="id_order" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"></constraints>
+            </column>
+            <column name="id_web_user" type="BIGINT"/>
+            <column name="id_payment_status" type="BIGINT"/>
+            <column name="id_payment_type" type="BIGINT"/>
+            <column name="transaction_number" type="VARCHAR(255)"/>
+            <column name="date_supply" type="DATE"/>
+            <column name="order_number" type="INTEGER"/>
+            <column name="id_order_status" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="order_user" baseColumnNames="id_web_user"
+                                 constraintName="FK_order_user_web_user" referencedTableName="web_user"
+                                 referencedColumnNames="id_web_user"/>
+        <addForeignKeyConstraint baseTableName="order_user" baseColumnNames="id_payment_status"
+                                 constraintName="FK_order_user_payment_status" referencedTableName="payment_status"
+                                 referencedColumnNames="id_payment_status"/>
+        <addForeignKeyConstraint baseTableName="order_user" baseColumnNames="id_payment_type"
+                                 constraintName="FK_order_user_payment_type" referencedTableName="payment_type"
+                                 referencedColumnNames="id_payment_type"/>
+        <addForeignKeyConstraint baseTableName="order_user" baseColumnNames="id_order_status"
+                                 constraintName="FK_order_user_order_status" referencedTableName="order_status"
+                                 referencedColumnNames="id_order_status"/>
+    </changeSet>
+
+    <!-- Table: order_product -->
+    <changeSet id="v1-20" author="Oleg">
+        <createTable tableName="order_product">
+            <column name="id_order_product" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"></constraints>
+            </column>
+            <column name="id_product" type="BIGINT"/>
+            <column name="quantity" type="INTEGER"/>
+            <column name="product_price" type="NUMERIC(10,2)"/>
+            <column name="id_order" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="order_product" baseColumnNames="id_product"
+                                 constraintName="FK_order_product_product" referencedTableName="product"
+                                 referencedColumnNames="id_product"/>
+        <addForeignKeyConstraint baseTableName="order_product" baseColumnNames="id_order"
+                                 constraintName="FK_order_product_payment_status" referencedTableName="order_user"
+                                 referencedColumnNames="id_order"/>
+    </changeSet>
+</databaseChangeLog>
+

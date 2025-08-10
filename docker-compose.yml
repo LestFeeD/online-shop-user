@@ -1,29 +1,50 @@
 volumes:
-  pg_task:
+  pg_user:
 
 services:
-  user:
+  postgres:
     image: postgres
     restart: always
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=1Q2q3q4q5q6q
-      - POSTGRES_DB=user
+      - POSTGRES_DB=rinma_shop
       - DOCKER_BUILDKIT=1
     volumes:
-      - pg_task:/var/lib/postgresql/data
+      - pg_user:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5433:5432"
-  app:
+  user-app:
     restart: always
-    build: .
+    build:
+      context: D:\JavaProjects\user
     ports:
       - "8090:8090"
     depends_on:
-      - user
+      - postgres
+      - kafka
     environment:
-      SPRING_DATASOURCE_URL: 'jdbc:postgresql://user:5432/rinma_shop'
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/rinma_shop'
       JAVA_OPTS: '-Xmx512m'
+      JWTSECRET: '367639123SD42264529ASDA576D5XZZX777217A25432A462D'
+      TOKEN_EXPIRATION: 3600000
+      DB_PASSWORD: '1Q2q3q4q5q6q'
+      DB_USER: 'postgres'
+  product-app:
+      build:
+        context:  D:\JavaProjects\product
+      restart: always
+      ports:
+        - "8091:8091"
+      depends_on:
+        - postgres
+        - kafka
+      environment:
+        SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/rinma_shop'
+        DB_PASSWORD: '1Q2q3q4q5q6q'
+        DB_USER: 'postgres'
+        JWTSECRET: '367639123SD42264529ASDA576D5XZZX777217A25432A462D'
+        TOKEN_EXPIRATION: 3600000
   redis:
     image: "redis:alpine"
     container_name: redis
@@ -38,13 +59,13 @@ services:
       - KAFKA_ENABLE_KRAFT=yes
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://:29093
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://host.docker.internal:29092
       - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:2181
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:29093
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_KRAFT_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
     volumes:
-      - ./kafka:/bitnami/kafka
+        - ./kafka:/bitnami/kafka

@@ -62,7 +62,7 @@ public class UserServiceTests {
                 .build();
 
         when(bindingResult.hasErrors()).thenReturn(false);
-        when(roleUserRepository.findByNameRole("CLIENT")).thenReturn(Optional.of(roleUser));
+        when(roleUserRepository.findByNameRole("ROLE_CLIENT")).thenReturn(Optional.of(roleUser));
         when(passwordEncoder.encode("41414222")).thenReturn("encodedPassword");
         when(webUserRepository.findByEmail("test@gmail.com")).thenReturn(Optional.empty());
 
@@ -85,7 +85,7 @@ public class UserServiceTests {
 
          userService.createUser(requestDto, bindingResult);
 
-        verify(roleUserRepository).findByNameRole("CLIENT");
+        verify(roleUserRepository).findByNameRole("ROLE_CLIENT");
     }
 
     @Test
@@ -157,7 +157,6 @@ public class UserServiceTests {
 
         when(webUserRepository.findById(1L)).thenReturn(Optional.ofNullable(webUser));
 
-        when(webUserRepository.findByEmail(requestDto.getEmail())).thenReturn(Optional.empty());
         when(bindingResult.hasErrors()).thenReturn(false);
         when(webUserRepository.save(webUser)).thenReturn(savedUser);
 
