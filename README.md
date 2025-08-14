@@ -61,6 +61,7 @@ _________
 
 - **Product Service**  
   Manages product catalog, product supply operations, and warehouse inventory tracking.  
-  [➡ View on GitHub]([https://github.com/username/product-service](https://github.com/LestFeeD/online-shop-product))
+   [➡ View on GitHub](https://github.com/LestFeeD/online-shop-product)
+
 
 
