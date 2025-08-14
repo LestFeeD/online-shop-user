@@ -54,5 +54,13 @@ The project includes a pre-configured `docker-compose.yml` file that launches th
 
 ```bash
 docker compose up --build -d
+```
+_________
+
+### 🔗 Related Modules
+
+- **Product Service**  
+  Manages product catalog, product supply operations, and warehouse inventory tracking.  
+  [➡ View on GitHub]([https://github.com/username/product-service](https://github.com/LestFeeD/online-shop-product))
 
 
