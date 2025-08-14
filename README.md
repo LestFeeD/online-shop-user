@@ -1,10 +1,14 @@
 # online-shop-user
 
-Макет базы данных в pgAdmin 4
+Database layout in pgAdmin 4
 ![Структура БД](postgFile.pgerd.png)
+_________
+## Swagger REST API docs:
+http://localhost:8090/swagger-ui/index.html#/
+_________
 
 ## Models
-______
+
 + city
 + address
 + role_user
