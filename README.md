@@ -1,7 +1,9 @@
 # online-shop-user
 
-> **Описание:** REST API на Spring Boot с базой данных PostgreSQL.  
-> Поддерживает документацию API через Swagger, сборку и запуск в Docker.
+> Description:
+>This module is part of a larger Spring Boot-based REST API for an online shop powered by PostgreSQL.
+>It handles user registration and authentication, shopping cart management, and order processing.
+>The service comes with built-in Swagger API documentation and supports containerized deployment via Docker for easy setup and scalability.
 
 Database layout in pgAdmin 4
 ![Структура БД](postgFile.pgerd.png)
@@ -38,18 +40,19 @@ _________
 
 _________
 
-## 🐳 Запуск через Docker Compose
+## 🐳 Running with Docker Compose
 
-В проекте уже настроен `docker-compose.yml`, который поднимает:
+The project includes a pre-configured `docker-compose.yml` file that launches the following services:
 
-- **PostgreSQL** — основная база данных `rinma_shop` (порт `5433` на хосте)
-- **user-app** — сервис пользователей (порт `8090`)
-- **product-app** — сервис товаров (порт `8091`)
-- **Redis** — кэш (порт `6379`)
-- **Kafka** — брокер сообщений (порт `9092` внутри контейнера, доступ с хоста через `29092`)
+- **PostgreSQL** — main database `rinma_shop` (port `5433` on the host)
+- **user-app** — user management service (port `8090`)
+- **product-app** — product management service (port `8091`)
+- **Redis** — in-memory cache (port `6379`)
+- **Kafka** — message broker (port `9092` inside the container, accessible from the host via `29092`)
 
-### 1. Сборка и запуск
+### 1. Build and start
 
 ```bash
 docker compose up --build -d
+
 
