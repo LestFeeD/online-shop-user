@@ -20,7 +20,7 @@ _________
 + web_user
 + address_warehouse
 + warehouse
-+ ProjectParticipants
++ confirmation_token
 + inventory
 + product
 + cart
