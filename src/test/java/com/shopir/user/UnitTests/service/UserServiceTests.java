@@ -4,10 +4,8 @@ import com.shopir.user.dto.request.CreateOrEditUserRequestDto;
 import com.shopir.user.dto.request.LoginRequestDto;
 import com.shopir.user.entity.*;
 import com.shopir.user.factories.UserFactory;
-import com.shopir.user.repository.AddressRepository;
-import com.shopir.user.repository.CityRepository;
-import com.shopir.user.repository.RoleUserRepository;
-import com.shopir.user.repository.WebUserRepository;
+import com.shopir.user.repository.*;
+import com.shopir.user.service.EmailService;
 import com.shopir.user.service.UserService;
 import com.shopir.user.utils.JwtUtils;
 import com.shopir.user.utils.PasswordChecker;
@@ -49,6 +47,11 @@ public class UserServiceTests {
     private AuthenticationManager authManager;
     @Mock
     private JwtUtils jwtUtils;
+    @Mock
+    private  ConfirmationTokenRepository confirmationTokenRepository;
+    @Mock
+    private  EmailService emailService;
+
     @Test
     void createUser_validDataForCreateNewUser() throws Exception {
         RoleUser roleUser = new RoleUser();
@@ -74,6 +77,7 @@ public class UserServiceTests {
                 .email("test@gmail.com")
                 .password("encodedPassword")
                 .roleUser(roleUser)
+                .activated(0)
                 .build();
 
         when(webUserRepository.save(any(WebUser.class))).thenAnswer(invocation -> {
@@ -94,13 +98,16 @@ public class UserServiceTests {
                 .email("test@gmail.com")
                 .password("testPassw")
                 .build();
+
         WebUser webUser = new WebUser();
         webUser.setPassword("testPassw");
         webUser.setEmail("test@gmail.com");
+        webUser.setActivated(1);
 
         Authentication authentication = mock(Authentication.class);
         when(authentication.isAuthenticated()).thenReturn(true);
         when(authManager.authenticate(any())).thenReturn(authentication);
+        when(webUserRepository.findByEmail(webUser.getEmail())).thenReturn(Optional.of(webUser));
         when(jwtUtils.generateToken(authentication)).thenReturn("mock-jwt-token");
 
         String token  = userService.loginUser(requestDto);

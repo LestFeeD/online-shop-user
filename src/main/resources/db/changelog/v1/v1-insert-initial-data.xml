@@ -2,7 +2,7 @@
                    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
-    <changeSet id="1-21" author="Oleg">
+    <changeSet id="1-22" author="Oleg">
         <!-- Вставка product_category -->
         <insert tableName="product_category">
             <column name="name" value="Электроника"/>
@@ -16,7 +16,7 @@
             <column name="warehouse_number" valueNumeric="323"/>
         </insert>
     </changeSet>
-    <changeSet id="v1-22" author="Oleg">
+    <changeSet id="v1-23" author="Oleg">
         <!-- Данные для product_category -->
         <insert tableName="product_category">
             <column name="name" value="Электроника"/>
@@ -71,7 +71,7 @@
             <column name="name_order_status" value="Завершен"/>
         </insert>
     </changeSet>
-    <changeSet id="v1-23" author="Oleg">
+    <changeSet id="v1-24" author="Oleg">
     <!-- Добавление пользователей -->
     <insert tableName="web_user">
         <column name="id_role_user" valueNumeric="1"/>
@@ -80,6 +80,8 @@
         <column name="email" value="ivan@example.com"/>
         <column name="phone" value="+79991112233"/>
         <column name="password" value="$2a$12$Q2htJki53hWX9.VAxAdHluZJP8wGVjnA4g3/ZazAwKzNiSJlzFMdW"/>
+        <column name="activated" value="1"/>
+
     </insert>
     <insert tableName="web_user">
         <column name="id_role_user" valueNumeric="2"/>
@@ -88,6 +90,7 @@
         <column name="email" value="anna@example.com"/>
         <column name="phone" value="+79994445566"/>
         <column name="password" value="hashed_password_anna"/>
+        <column name="activated" value="1"/>
     </insert>
 
     <!-- Добавление продуктов -->

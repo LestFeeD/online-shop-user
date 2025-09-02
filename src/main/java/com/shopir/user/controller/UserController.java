@@ -2,30 +2,23 @@ package com.shopir.user.controller;
 
 import com.shopir.user.dto.request.CreateOrEditUserRequestDto;
 import com.shopir.user.dto.request.LoginRequestDto;
-import com.shopir.user.dto.response.EditUserResponseDto;
 import com.shopir.user.dto.response.UserInformationResponseDto;
-import com.shopir.user.entity.WebUser;
 import com.shopir.user.service.AuthenticationService;
 import com.shopir.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
+import java.sql.SQLException;
 import java.util.Map;
 
 @Tag(name = "User")
@@ -83,11 +76,10 @@ public class UserController {
 
     @Operation(
             summary = "User registration.")
-    @PostMapping("/user")
-    public ResponseEntity<Void> registration(@Valid @RequestBody CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) {
-        Long idWebUser = userService.createUser(requestDto, bindingResult);
-        URI location = URI.create("/user/" + idWebUser);
-        return ResponseEntity.created(location).build();
+    @PostMapping("/registration")
+    public ResponseEntity<String> registration(@Valid @RequestBody CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) throws SQLException {
+        String answer = userService.createUser(requestDto, bindingResult);
+        return ResponseEntity.ok(answer);
     }
 
     @Operation(
@@ -100,6 +92,16 @@ public class UserController {
     }
 
     @Operation(
+            summary = "User's email confirmation",
+            description = "The user receives a token that will last up to 15 minutes, and which must be confirmed by mail in order for the account to be saved."
+    )
+    @GetMapping("/registration/confirm")
+    public ResponseEntity<String> confirm(@RequestParam("token") String token)  {
+        String answer = userService.confirmToken(token);
+        return  ResponseEntity.ok(answer);
+    }
+
+    @Operation(
             summary = "Editing basic user data.")
     @PreAuthorize("hasRole('CLIENT')")
     @PatchMapping("/user")
@@ -109,7 +111,7 @@ public class UserController {
         if (idUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        UserInformationResponseDto updatedUserInfo = userService.findUser(idUser);
+        UserInformationResponseDto updatedUserInfo = userService.editUser(requestDto, idUser,  bindingResult);
 
         return ResponseEntity.ok(updatedUserInfo);
     }
@@ -118,7 +120,7 @@ public class UserController {
             summary = "Editing mail and password.")
     @PreAuthorize("hasRole('CLIENT')")
     @PatchMapping("/details-user")
-    public ResponseEntity<Void> editPasswordOrEmailUser( @Valid @RequestBody CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) {
+    public ResponseEntity<Void> editPasswordOrEmailUser( @Valid @RequestBody CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) throws SQLException {
         Long idUser = authenticationService.getCurrentUserId();
 
         if (idUser == null) {

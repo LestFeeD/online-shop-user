@@ -2,6 +2,8 @@ package com.shopir.user.ITTests.controller;
 
 import com.shopir.user.dto.request.CreateOrEditUserRequestDto;
 import com.shopir.user.dto.response.UserInformationResponseDto;
+import com.shopir.user.entity.ConfirmationToken;
+import com.shopir.user.repository.ConfirmationTokenRepository;
 import com.shopir.user.security.MyUserDetails;
 import com.shopir.user.service.KafkaConsumerService;
 import com.shopir.user.service.UserService;
@@ -68,6 +70,10 @@ public class UserControllerIT {
     @Autowired
     private WebTestClient webTestClient;
 
+    @Autowired
+    private ConfirmationTokenRepository confirmationTokenRepository;
+
+
     private static Long idUser;
 
     @BeforeAll
@@ -109,18 +115,39 @@ public class UserControllerIT {
                 .build();
 
         webTestClient.post()
-                .uri("/user")
+                .uri("/registration")
                 .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON_VALUE)
                 .bodyValue(requestDto)
                 .exchange()
                 .expectStatus()
-                .isCreated();
+                .isOk();
 
         MyUserDetails userDetails = new MyUserDetails(idUser, "test@gmail.com","test1234",  List.of(new SimpleGrantedAuthority("ROLE_CLIENT")));
         Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         String accessToken = jwtUtils.generateToken(authentication);
 
         String mockBearerToken = "Bearer " + accessToken;
+
+        ConfirmationToken token = confirmationTokenRepository.findAll()
+                .stream()
+                .filter(t -> t.getWebUser().getEmail().equals(requestDto.getEmail()))
+                .findFirst()
+                .orElseThrow();
+
+        String confirmResponse = webTestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/registration/confirm")
+                        .queryParam("token", token.getUserToken())
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(confirmResponse).contains("confirmed");
+
 
         UserInformationResponseDto finUser = webTestClient.get()
                 .uri("/user")

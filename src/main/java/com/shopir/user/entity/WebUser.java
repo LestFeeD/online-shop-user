@@ -23,8 +23,9 @@ public class WebUser implements Serializable {
     private String surname;
     private String phone;
     private String email;
+    private String temporaryMail;
     private String password;
-
+    private Integer activated;
 
     @ManyToOne
     @JoinColumn(name = "id_role_user")
@@ -41,4 +42,8 @@ public class WebUser implements Serializable {
     @OneToMany(mappedBy = "webUser", cascade = CascadeType.PERSIST)
     @JsonIgnore
     private Set<Address> addresses;
+
+    @OneToMany(mappedBy = "webUser", cascade = CascadeType.PERSIST)
+    @JsonIgnore
+    private Set<ConfirmationToken> confirmationTokens;
 }

@@ -4,30 +4,27 @@ import com.shopir.user.dto.request.CreateOrEditUserRequestDto;
 import com.shopir.user.dto.request.LoginRequestDto;
 import com.shopir.user.dto.response.EditUserResponseDto;
 import com.shopir.user.dto.response.UserInformationResponseDto;
-import com.shopir.user.entity.Address;
-import com.shopir.user.entity.City;
-import com.shopir.user.entity.RoleUser;
-import com.shopir.user.entity.WebUser;
+import com.shopir.user.entity.*;
 import com.shopir.user.exceptions.BadRequestException;
 import com.shopir.user.exceptions.NotFoundException;
 import com.shopir.user.exceptions.UnauthorizedException;
 import com.shopir.user.factories.UserFactory;
-import com.shopir.user.repository.AddressRepository;
-import com.shopir.user.repository.CityRepository;
-import com.shopir.user.repository.RoleUserRepository;
-import com.shopir.user.repository.WebUserRepository;
+import com.shopir.user.repository.*;
 import com.shopir.user.security.MyUserDetails;
 import com.shopir.user.utils.JwtUtils;
 import com.shopir.user.utils.PasswordChecker;
 import com.shopir.user.validation.ValidationErrors;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -39,8 +36,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 
-import java.util.Map;
-import java.util.Optional;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,6 +54,8 @@ public class UserService implements UserDetailsService  {
     private final PasswordChecker passwordEncoder;
     private final ValidationErrors validationErrors;
     private final JwtUtils jwtUtils;
+    private final ConfirmationTokenRepository confirmationTokenRepository;
+    private final EmailService emailService;
      AuthenticationManager authManager;
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
@@ -65,7 +66,7 @@ public class UserService implements UserDetailsService  {
     @Autowired
     public UserService(WebUserRepository webUserRepository, RoleUserRepository roleUserRepository,
                        AddressRepository addressRepository, CityRepository cityRepository, UserFactory userFactory,
-                       PasswordChecker passwordEncoder, ValidationErrors validationErrors, JwtUtils jwtUtils,
+                       PasswordChecker passwordEncoder, ValidationErrors validationErrors, JwtUtils jwtUtils, ConfirmationTokenRepository confirmationTokenRepository, EmailService emailService,
                        AuthenticationManager authManager, KafkaTemplate<String, String> kafkaTemplate) {
         this.webUserRepository = webUserRepository;
         this.roleUserRepository = roleUserRepository;
@@ -75,6 +76,8 @@ public class UserService implements UserDetailsService  {
         this.passwordEncoder = passwordEncoder;
         this.validationErrors = validationErrors;
         this.jwtUtils = jwtUtils;
+        this.confirmationTokenRepository = confirmationTokenRepository;
+        this.emailService = emailService;
         this.authManager = authManager;
         this.kafkaTemplate = kafkaTemplate;
     }
@@ -86,7 +89,7 @@ public class UserService implements UserDetailsService  {
     }
 
     @Transactional
-    public Long createUser(CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) {
+    public String createUser(CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) throws SQLException {
         if(bindingResult.hasErrors() ) {
             String result = validationErrors.getValidationErrors(bindingResult);
             logger.error("Validation errors occurred while register user: {}", result);
@@ -109,13 +112,19 @@ public class UserService implements UserDetailsService  {
                 .email(requestDto.getEmail())
                 .password(encodedPassword)
                 .roleUser(role)
+                .activated(0)
                 .build();
 
         webUserRepository.save(webUser);
 
         WebUser createdWebUser = webUserRepository.findById(webUser.getIdWebUser()).orElseThrow();
 
-        return createdWebUser.getIdWebUser();
+        ConfirmationToken confirmationToken = createConfirmationToken(webUser);
+        logger.info("ConfirmToken ID: {}", confirmationToken.getIdConfirmationToken());
+        sendConfirmationEmail(requestDto, confirmationToken.getUserToken());
+        logger.debug("Successful sending of email confirmation");
+
+        return "Confirmation email sent to " + requestDto.getEmail() + ". Please confirm your account.";
     }
 
     @Transactional
@@ -127,14 +136,16 @@ public class UserService implements UserDetailsService  {
         try {
             Authentication authentication = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword()));
+            WebUser webUser =  webUserRepository.findByEmail(requestDto.getEmail()).orElseThrow();
 
-            if (authentication.isAuthenticated()) {
+            if (authentication.isAuthenticated() && webUser.getActivated() == 1) {
                 return jwtUtils.generateToken(authentication);
+            } else {
+                throw new UnauthorizedException("User is not registered");
             }
         } catch (BadCredentialsException ex) {
             throw new UnauthorizedException("Invalid email or password");
         }
-        return "fail";
     }
 
     @Transactional
@@ -193,7 +204,7 @@ public class UserService implements UserDetailsService  {
     }
 
     @Transactional
-    public void editPasswordOrEmail(Long idWebUser, CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) {
+    public void editPasswordOrEmail(Long idWebUser, CreateOrEditUserRequestDto requestDto, BindingResult bindingResult) throws SQLException {
         logger.info("Data for edit user, email = {}, password = {}", requestDto.getEmail(), requestDto.getPassword());
 
         if(bindingResult.hasErrors() ) {
@@ -208,8 +219,10 @@ public class UserService implements UserDetailsService  {
             if(webUserRepository.findByEmail(requestDto.getEmail()).isPresent()) {
                 throw new BadRequestException("The user with this email already exists.");
             }
-            webUser.setEmail(requestDto.getEmail());
-        }
+            ConfirmationToken confirmationToken = createConfirmationToken(webUser);
+            webUser.setTemporaryMail(requestDto.getEmail());
+            sendConfirmationUpdateEmail(requestDto, confirmationToken.getUserToken());
+            logger.debug("Successful sending of email confirmation in update method");        }
 
         if(requestDto.getPassword() != null) {
             String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
@@ -254,5 +267,159 @@ public class UserService implements UserDetailsService  {
         logger.info("User found: {}", user.getEmail());
         logger.info("Stored password: {}", user.getPassword());
         return MyUserDetails.buildUserDetails(user);
+    }
+
+    private ConfirmationToken createConfirmationToken(WebUser user) throws SQLException {
+            String token = UUID.randomUUID().toString();
+
+            ConfirmationToken confirmationToken = new ConfirmationToken(
+                    token,
+                    LocalDateTime.now(),
+                    LocalDateTime.now().plusMinutes(15),
+                    user
+            );
+            confirmationToken.setWebUser(user);
+            user.setConfirmationTokens(new HashSet<>(List.of(confirmationToken)));
+
+            confirmationTokenRepository.save(confirmationToken);
+
+            return confirmationToken;
+    }
+
+    private void sendConfirmationEmail(CreateOrEditUserRequestDto dtoRequest, String token) {
+            String link = "http://localhost:8090/registration/confirm?token=" + token;
+            emailService.send(dtoRequest.getEmail(), buildEmail(dtoRequest.getName(), link));
+    }
+
+    private void sendConfirmationUpdateEmail(CreateOrEditUserRequestDto dtoRequest, String token) {
+
+            String link = "http://localhost:8090/registration/confirm?token=" + token;
+        emailService.send(dtoRequest.getEmail(), buildEmail(dtoRequest.getName(), link));
+
+    }
+
+    @Scheduled(fixedRate = 900000,  initialDelay = 5000)
+    public void removeExpiredUsers() {
+            LocalDateTime now = LocalDateTime.now();
+            Timestamp timestamp = Timestamp.valueOf(now);
+
+            Set<Long> expiredTokens = confirmationTokenRepository.findAllExpiredToken(timestamp);
+
+            for (Long tokenId : expiredTokens) {
+
+                Long userId = webUserRepository.findByIdToken(tokenId);
+                WebUser webUser = webUserRepository.findById(userId).orElseThrow(() -> new NotFoundException("Not found by idUser: " + userId));
+
+                if (userId != null && webUser.getTemporaryMail() != null) {
+                    confirmationTokenRepository.deleteById(tokenId);
+                    webUserRepository.deleteById(userId);
+                }
+            }
+    }
+
+    public String confirmToken(String token){
+
+                    ConfirmationToken confirmationToken = confirmationTokenRepository.findByToken(token);
+                    logger.info("ConfirmationToken found: ID={}, ExpiresAt={}",
+                            confirmationToken.getIdConfirmationToken(), confirmationToken.getExpiresAt());
+
+                    if (confirmationToken.getConfirmedAt() != null) {
+                        logger.warn("Token already confirmed at: {}", confirmationToken.getConfirmedAt());
+                        throw new IllegalStateException("email already confirmed");
+                    }
+
+                    LocalDateTime expiredAt = confirmationToken.getExpiresAt();
+                    if (expiredAt.isBefore(LocalDateTime.now())) {
+                        logger.warn("Token expired at: {}", expiredAt);
+                        throw new IllegalStateException("token expired");
+                    }
+
+                    WebUser user = confirmationToken.getWebUser();
+                    logger.info("Associated WebUser found: ID={}, CurrentEmail={}, TemporaryEmail={}",
+                            user.getIdWebUser(), user.getEmail(), user.getTemporaryMail());
+
+                    user.setActivated(1);
+
+                    if (user.getTemporaryMail() != null) {
+                        logger.info("Updating user email from temporary email: {}", user.getTemporaryMail());
+                        user.setEmail(user.getTemporaryMail());
+                        user.setTemporaryMail(null);
+                    }
+
+                    webUserRepository.save(user);
+
+                    confirmationToken.setConfirmedAt(LocalDateTime.now());
+                    return "confirmed";
+        }
+
+
+
+    public String buildEmail(String name, String link) {
+        return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +
+                "\n" +
+                "<span style=\"display:none;font-size:1px;color:#fff;max-height:0\"></span>\n" +
+                "\n" +
+                "  <table role=\"presentation\" width=\"100%\" style=\"border-collapse:collapse;min-width:100%;width:100%!important\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n" +
+                "    <tbody><tr>\n" +
+                "      <td width=\"100%\" height=\"53\" bgcolor=\"#0b0c0c\">\n" +
+                "        \n" +
+                "        <table role=\"presentation\" width=\"100%\" style=\"border-collapse:collapse;max-width:580px\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" align=\"center\">\n" +
+                "          <tbody><tr>\n" +
+                "            <td width=\"70\" bgcolor=\"#0b0c0c\" valign=\"middle\">\n" +
+                "                <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse\">\n" +
+                "                  <tbody><tr>\n" +
+                "                    <td style=\"padding-left:10px\">\n" +
+                "                  \n" +
+                "                    </td>\n" +
+                "                    <td style=\"font-size:28px;line-height:1.315789474;Margin-top:4px;padding-left:10px\">\n" +
+                "                      <span style=\"font-family:Helvetica,Arial,sans-serif;font-weight:700;color:#ffffff;text-decoration:none;vertical-align:top;display:inline-block\">Confirm your email</span>\n" +
+                "                    </td>\n" +
+                "                  </tr>\n" +
+                "                </tbody></table>\n" +
+                "              </a>\n" +
+                "            </td>\n" +
+                "          </tr>\n" +
+                "        </tbody></table>\n" +
+                "        \n" +
+                "      </td>\n" +
+                "    </tr>\n" +
+                "  </tbody></table>\n" +
+                "  <table role=\"presentation\" class=\"m_-6186904992287805515content\" align=\"center\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;max-width:580px;width:100%!important\" width=\"100%\">\n" +
+                "    <tbody><tr>\n" +
+                "      <td width=\"10\" height=\"10\" valign=\"middle\"></td>\n" +
+                "      <td>\n" +
+                "        \n" +
+                "                <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse\">\n" +
+                "                  <tbody><tr>\n" +
+                "                    <td bgcolor=\"#1D70B8\" width=\"100%\" height=\"10\"></td>\n" +
+                "                  </tr>\n" +
+                "                </tbody></table>\n" +
+                "        \n" +
+                "      </td>\n" +
+                "      <td width=\"10\" valign=\"middle\" height=\"10\"></td>\n" +
+                "    </tr>\n" +
+                "  </tbody></table>\n" +
+                "\n" +
+                "\n" +
+                "\n" +
+                "  <table role=\"presentation\" class=\"m_-6186904992287805515content\" align=\"center\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;max-width:580px;width:100%!important\" width=\"100%\">\n" +
+                "    <tbody><tr>\n" +
+                "      <td height=\"30\"><br></td>\n" +
+                "    </tr>\n" +
+                "    <tr>\n" +
+                "      <td width=\"10\" valign=\"middle\"><br></td>\n" +
+                "      <td style=\"font-family:Helvetica,Arial,sans-serif;font-size:19px;line-height:1.315789474;max-width:560px\">\n" +
+                "        \n" +
+                "            <p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\">Hi " + name + ",</p><p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\"> Thank you for registering. Please click on the below link to activate your account: </p><blockquote style=\"Margin:0 0 20px 0;border-left:10px solid #b1b4b6;padding:15px 0 0.1px 15px;font-size:19px;line-height:25px\"><p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\"> <a href=\"" + link + "\">Activate Now</a> </p></blockquote>\n Link will expire in 15 minutes. <p>See you soon</p>" +
+                "        \n" +
+                "      </td>\n" +
+                "      <td width=\"10\" valign=\"middle\"><br></td>\n" +
+                "    </tr>\n" +
+                "    <tr>\n" +
+                "      <td height=\"30\"><br></td>\n" +
+                "    </tr>\n" +
+                "  </tbody></table><div class=\"yj6qo\"></div><div class=\"adL\">\n" +
+                "\n" +
+                "</div></div>";
     }
 }

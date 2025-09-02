@@ -208,6 +208,8 @@
             <column name="phone" type="VARCHAR(255)"/>
             <column name="password" type="VARCHAR(255)"/>
             <column name="surname" type="VARCHAR(255)"/>
+            <column name="temporary_mail" type="VARCHAR(255)"/>
+            <column name="activated" type="BIGINT"/>
         </createTable>
         <addForeignKeyConstraint
                 baseTableName="web_user"
@@ -337,6 +339,23 @@
         <addForeignKeyConstraint baseTableName="order_product" baseColumnNames="id_order"
                                  constraintName="FK_order_product_payment_status" referencedTableName="order_user"
                                  referencedColumnNames="id_order"/>
+    </changeSet>
+
+    <!-- Table: confirmation_token -->
+    <changeSet id="v1-21" author="Oleg">
+        <createTable tableName="confirmation_token">
+            <column name="id_confirmation_token" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"></constraints>
+            </column>
+            <column name="user_token" type="VARCHAR(120)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="expires_at" type="TIMESTAMP"/>
+            <column name="confirmed_at" type="TIMESTAMP"/>
+            <column name="id_web_user" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="confirmation_token" baseColumnNames="id_web_user"
+                                 constraintName="FK_user_confirmation_token" referencedTableName="web_user"
+                                 referencedColumnNames="id_web_user"/>
     </changeSet>
 </databaseChangeLog>
 
